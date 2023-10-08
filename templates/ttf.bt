@@ -103,11 +103,6 @@ typedef struct tTable {
 };
 
 //报错位置 这里尝试把这个函数内联回去
-string tTableRead( tTable &d ) {
-	char s[50];
-	SPrintf(s, "Table %s at offset: %u with size: %u", d.Tag.asChar, d.offset, d.length);
-	return s;
-}
 
 typedef struct tcmap_format0 {
 	cmap_subtable = FTell();
@@ -1086,7 +1081,7 @@ struct ttfFile
 	//return s;
     //}
 
-    struct tTable Table[OffsetTable.numTables] <read=tTableRead>;
+    struct tTable Table[OffsetTable.numTables];
 
     nextTTFRec = FTell();
 
