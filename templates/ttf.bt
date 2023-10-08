@@ -246,12 +246,6 @@ typedef struct thdmx {
 	} DeviceRecord[numRecords] <optimize=false>;
 };
 
-string thdmxRead(thdmx &d) {
-	string s;
-	SPrintf(s, "Version %i %u records %u bytes", d.version, d.numRecords, d.sizeDeviceRecord);
-	return s;
-}
-
 typedef struct thead {
     ttfId++;
 
@@ -327,12 +321,6 @@ typedef struct thhea {
 	USHORT numberOfHMetrics;	// Number of hMetric entries in 'hmtx' table 
 };
 
-string thheaRead( thhea &d ) {
-	string s;
-	SPrintf(s, "v%.2f %u hmtx records", d.version/65535.0, d.numberOfHMetrics);
-	return s;
-}
-
 typedef struct 	tlongHorMetric {
 	USHORT	advanceWidth;
 	SHORT	lsb;
@@ -354,11 +342,7 @@ typedef struct thmtx {
 	// Only one run is allowed and it must be at the end. This allows a monospaced font to vary the left side bearing values for each glyph. 
 };
 
-string thmtxRead(thmtx &d) {
-	string s;
-	SPrintf(s, "%u HMetrics %u leftSideBearing", d.numberOfHMetrics, d.numLeftSideBearing);
-	return s;
-}
+
 
 typedef struct tmaxp {
 	TT_Fixed version;	//Table version number 0x00005000 for version 0.5 
@@ -383,16 +367,6 @@ typedef struct tmaxp {
 	}
 };
 
-string tmaxpRead(tmaxp &d) {
-	string s;
-	if (d.version == 0x00005000) {
-		SPrintf( s, "v%.2f %u glyphs", d.version/65535.0, d.numGlyphs);
-		}
-	else {
-		SPrintf( s, "v%.2f %u glyphs %u points %u contours", d.version/65535.0, d.numGlyphs,d.maxPoints,d.maxContours);
-		}
-	return s;
-}
 
 typedef struct tname {
 // http://www.microsoft.com/typography/OTSPEC/name.htm
@@ -422,11 +396,6 @@ string NameRecordRead( tNameRecord &d ) {
 	return s;
 }
 
-string tnameRead(tname &name) {
-	string s;
-	SPrintf(s, "%li Names", name.count);
-	return s;
-}
 
 typedef struct tOS_2 {
 	// http://www.microsoft.com/typography/OTSPEC/os2.htm
@@ -480,11 +449,6 @@ typedef struct tOS_2 {
 	USHORT usMaxContext;
 };
 
-string tOS_2Read(tOS_2 &d) {
-	string s;
-	SPrintf(s, "v%i chars %i to %i from %4s", d.version, d.usFirstCharIndex, d.usLastCharIndex, d.achVendID);
-	return s;
-}
 
 typedef struct tpost {
 	local quad post = FTell();
@@ -523,21 +487,6 @@ string tpostNameRead( tpostName &d ) {
 	return d.text;	//use this instead to get the Unicode, etc... characters.
 }
 
-string tpostRead( tpost &d ) {
-	string s;
-	if ((d.version == 0x00020000) || (d.version == 0x00025000)){
-		SPrintf( s, "version %.2f %u glyphs", d.version/65535.0, d.numberOfGlyphs);
-	} else {
-		SPrintf(s, "version %.2f", d.version/65535.0);
-	}
-	
-	if (d.isFixedPitch) {
-		s += " fixed pitch"; 
-	} else { 
-		s += " proportional"; 
-	}
-	return s;
-};
 
 typedef struct tcvt {
 	local quad n = curTblLength / sizeof(TT_FWord);
@@ -559,15 +508,6 @@ typedef struct tloca {
 	}
 };
 
-string tlocaRead(tloca &d) {
-	string s;
-	if (d.format == 0) {
-		SPrintf(s, "%u short offsets", d.n);
-	} else {
-		SPrintf(s, "%u long offsets", d.n);
-	}
-	return s;
-}
 
 typedef struct tSimpleGlyphPoints {
 	local ulong i;
@@ -649,11 +589,7 @@ typedef struct tSimpleGlyphPoints {
 	}
 };
 
-string tPointsRead ( tSimpleGlyphPoints &d ) {
-	string s;
-	s="hello";
-	return s;
-}
+
 
 typedef struct tSimpleGlyphFlags {
 	typedef UBYTE bitFlag;
@@ -674,23 +610,6 @@ typedef struct tSimpleGlyphFlags {
 		if (repeat) flag_repeat = 1;
 	}
 };
-
-string tSimpleGlyphFlagsRead (tSimpleGlyphFlags &d) {
-	string s;
-	if (exists(d.count)) {
-		SPrintf(s, " repeat %u times", d.count);
-	}
-	else {
-		s="Point";
-		if (d.onCurve) s += " OnCurve";
-		if (!d.xByte) {s += " X"; if (d.xType) s += "R";}
-		if (d.xByte) {s += " x"; if (d.xType) s += "+"; else s += "-";}
-		if (!d.yByte) {s += " Y"; if (d.yType) s += "R";}
-		if (d.yByte) {s += " y"; if (d.yType) s += "+"; else s += "-";}
-		if (d.repeat) s += " REPEAT:";
-	}
-	return s;
-}
 
 typedef struct tSimpleGlyph {
 	SHORT numberOfContours;
@@ -729,7 +648,7 @@ typedef struct tSimpleGlyph {
 	
 	local ushort numFlags = glyf_flag_index - glyf_flag_table;
 	struct {
-		tSimpleGlyphFlags flag[numFlags] <optimize=false, read=tSimpleGlyphFlagsRead>;
+		tSimpleGlyphFlags flag[numFlags] <optimize=false>;
 	} compressedFlags;
 	// Array of flags for each coordinate in outline; n is the number of flags. 
 	//`-----------------------------------
@@ -760,7 +679,7 @@ typedef struct tglyf {
 		FSeek(glyf_table + glyf_offset);
 		if (ReadShort(FTell()) > 0) {
 			// If the number of contours is greater than or equal to zero, this is a single glyph;
-			struct tSimpleGlyph SimpleGlyph <read = tSimpleGlyphRead>;
+			struct tSimpleGlyph SimpleGlyph;
 		}
 
 		if (ReadShort(FTell()) < 0 & 0==1) { // UNTESTED CODE. TODO: test
@@ -806,11 +725,6 @@ typedef struct tglyf {
 	}
 };
 
-string tSimpleGlyphRead( tSimpleGlyph &d ) {
-	string s;
-	SPrintf( s, "%u contours %u insts %u flags %u points", d.numberOfContours, d.instructionLength, d.numFlags, d.numPoints);
-	return s;
-}
 
 typedef struct tGDEF {
 	TT_Fixed Version;	// Version of the GDEF table-initially 0x00010000 
@@ -848,11 +762,6 @@ typedef struct tDSIG {
 	} Sigs[usNumSigs] <optimize = false>;
 };
 
-string tDSIGRead( tDSIG &d ) {
-	string s;
-	SPrintf( s, "v%u %u signature(s)", d.ulVersion, d.usNumSigs);
-	return s;
-}
 
 typedef struct tLangSysTable{
 	USHORT LookupOrder; // = NULL (reserved for an offset to a reordering table) 
@@ -871,9 +780,6 @@ typedef struct tLangSysRecord {
 	FSeek(next);
 };
 
-string tLangSysRecordRead (tLangSysRecord &d ) {
-	return d.LangSysTag;
-}
 
 typedef struct tScriptRecord {
 	char ScriptTag[4];	//4-byte ScriptTag identifier 
@@ -885,7 +791,7 @@ typedef struct tScriptRecord {
 		USHORT DefaultLangSys;	// Offset to DefaultLangSys table-from beginning of Script table-may be NULL 
 		uint16 LangSysCount;	// Number of LangSysRecords for this script-excluding the DefaultLangSys 
 		if (LangSysCount){
-			tLangSysRecord LangSysRecord[LangSysCount] <optimize=false, read=tLangSysRecordRead>; 
+			tLangSysRecord LangSysRecord[LangSysCount] <optimize=false>; 
 		}
 			//Array of LangSysRecords-listed alphabetically by LangSysTag 
 	} ScriptTable;
@@ -895,9 +801,6 @@ typedef struct tScriptRecord {
 	FSeek(next);
 };
 
-string tScriptRecordRead (tScriptRecord &d) {
-	return d.ScriptTag;
-}
 
 typedef struct tScriptList {
 	USHORT Offset; //Offset to ScriptList table-from beginning of GSUB table 
@@ -905,16 +808,11 @@ typedef struct tScriptList {
 	FSeek(GSUBorGPOS_table + Offset);
 	local quad ScriptList=FTell();
 	uint16 ScriptCount; //Number of ScriptRecords 
-	tScriptRecord ScriptRecord[ScriptCount]<read=tScriptRecordRead, optimize = false>; 
+	tScriptRecord ScriptRecord[ScriptCount]<optimize = false>; 
 	//Array of ScriptRecords -listed alphabetically by ScriptTag 
 	FSeek(next);
 };
 
-string tScriptListRead (tScriptList &d) {
-	string s;
-	SPrintf( s, "%u scripts", d.ScriptCount);
-	return s;
-}
 
 typedef struct tFeatureRecord {
 	char FeatureTag[4];	//4-byte FeatureTag identifier 
@@ -930,9 +828,6 @@ typedef struct tFeatureRecord {
 	FSeek(next);
 };
 
-string tFeatureRecordRead (tFeatureRecord &d) {
-	return d.FeatureTag;
-}
 
 typedef struct tFeatureList {
 	USHORT Offset; //Offset to FeatureList table-from beginning of GSUB table 
@@ -940,16 +835,11 @@ typedef struct tFeatureList {
 	FSeek(GSUBorGPOS_table + Offset);
 	local quad FeatureList=FTell();
 	uint16 FeatureCount; //Number of FeatureRecords 
-	tFeatureRecord FeatureRecord[FeatureCount] <read= tFeatureRecordRead, optimize = false>; 
+	tFeatureRecord FeatureRecord[FeatureCount] <optimize = false>; 
 	//Array of FeatureRecords -listed alphabetically by FeatureTag 
 	FSeek(next);
 };
 
-string tFeatureListRead (tFeatureList &d) {
-	string s;
-	SPrintf( s, "%u Features", d.FeatureCount);
-	return s;
-}
 
 
 typedef struct tLookupRecord {
@@ -977,8 +867,8 @@ typedef struct tLookupList {
 typedef struct tGSUBorGPOS {
 	local quad GSUBorGPOS_table = FTell();
 	TT_Fixed Version; //Version of the GSUB table-initially set to 0x00010000 
-	tScriptList ScriptList <read=tScriptListRead>; //Offset to ScriptList table-from beginning of GSUB table 
-	tFeatureList FeatureList <read=tFeatureListRead>; //Offset to FeatureList table-from beginning of GSUB table 
+	tScriptList ScriptList; //Offset to ScriptList table-from beginning of GSUB table 
+	tFeatureList FeatureList; //Offset to FeatureList table-from beginning of GSUB table 
 	tLookupList LookupList; //Offset to LookupList table-from beginning of GSUB table 
 
 	//LookupType Enumeration table for glyph substitution 
@@ -995,11 +885,6 @@ typedef struct tGSUBorGPOS {
 	//9+ Reserved For future use 
 };
 
-string tGSUBorGPOSRead( tGSUBorGPOS &d ) {
-	string s;
-	SPrintf( s, "v%.2f", d.Version/65535.0);
-	return s;
-}
 
 typedef struct tLTSH {
     USHORT ver;
@@ -1065,22 +950,16 @@ local int64 nextTTFRec = 0;
 struct ttfFile
 {
     //number2
-    //local possible_sfntver[]={0x10000};
-    //local possible_table_number[]={9};
-    //for(int name_number=9;name_number<=21;name_number++)
-    //{
-      //  possible_table_number+=name_number;
-    //}
-   // if(ReadInt(FTell(),possible_sfntver)==0x10000&&ReadUShort(FTell()+4,possible_table_number)>=9)
-    //{
+    local int possible_sfntver[]={0x10000};
+    local uint16 possible_table_number[]={9};
+    for(int name_number=9;name_number<=21;name_number++)
+    {
+        possible_table_number+=name_number;
+    }
+    if(ReadInt(FTell(),possible_sfntver)==0x10000&&ReadUShort(FTell()+4,possible_table_number)>=9)
+    {
         
     struct tOffsetTable OffsetTable;
-   // string tTableRead( tTable &d ) {
-	//char s[50];
-	//SPrintf(s, "Table %s at offset: %u with size: %u", d.Tag.asChar, d.offset, d.length);
-	//return s;
-    //}
-
     struct tTable Table[OffsetTable.numTables];
 
     nextTTFRec = FTell();
@@ -1088,24 +967,24 @@ struct ttfFile
     //Required Tables
     if (findTable(this, "cmap")) {struct tcmap cmap; };
     if (findTable(this, "head")) {struct thead head;};
-    if (findTable(this, "hhea")) {struct thhea hhea <read=thheaRead>; };
-    if (findTable(this, "hmtx")) {struct thmtx hmtx <read=thmtxRead>; };
-    if (findTable(this, "maxp")) {struct tmaxp maxp <read=tmaxpRead>; };
-    if (findTable(this, "name")) {struct tname name <read=tnameRead>; };
-    if (findTable(this, "OS/2")) {struct tOS_2 OS_2 <read=tOS_2Read>; };
-    if (findTable(this, "post")) {struct tpost post <read=tpostRead>; };
+    if (findTable(this, "hhea")) {struct thhea hhea; };
+    if (findTable(this, "hmtx")) {struct thmtx hmtx; };
+    if (findTable(this, "maxp")) {struct tmaxp maxp; };
+    if (findTable(this, "name")) {struct tname name; };
+    if (findTable(this, "OS/2")) {struct tOS_2 OS_2; };
+    if (findTable(this, "post")) {struct tpost post; };
     
     //Other Tables
     if (findTable(this, "cvt ")) {struct tcvt  cvt ; };
     if (findTable(this, "fpgm")) {struct tfpgm fpgm; };
-    if (findTable(this, "loca")) {struct tloca loca <read=tlocaRead>; };
+    if (findTable(this, "loca")) {struct tloca loca; };
     if (findTable(this, "glyf")) {struct tglyf glyf; };
     if (findTable(this, "prep")) {struct tprep prep;};
     if (findTable(this, "GDEF")) {struct tGDEF GDEF; };
-    if (findTable(this, "GSUB")) {struct tGSUBorGPOS GSUB <read=tGSUBorGPOSRead>; };
-    if (findTable(this, "GPOS")) {struct tGSUBorGPOS GPOS <read=tGSUBorGPOSRead>; };
-    if (findTable(this, "DSIG")) {struct tDSIG DSIG <read=tDSIGRead>; };
-    if (findTable(this, "hdmx")) {struct thdmx hdmx <read=thdmxRead>; };
+    if (findTable(this, "GSUB")) {struct tGSUBorGPOS GSUB; };
+    if (findTable(this, "GPOS")) {struct tGSUBorGPOS GPOS; };
+    if (findTable(this, "DSIG")) {struct tDSIG DSIG; };
+    if (findTable(this, "hdmx")) {struct thdmx hdmx; };
     if (findTable(this, "LTSH")) {struct tLTSH LTSH; };
 	if (findTable(this, "VDMX")) {struct tVDMX VDMX; };
 	if (findTable(this, "gasp")) {struct tgasp gasp; };
@@ -1115,7 +994,7 @@ struct ttfFile
     //if (findTable(this, "kern")) {struct tkern kern <read=tkernRead>};
 
     FSeek(nextTTFRec);
-   // }
+    }
 };
 
 int findTable( ttfFile& file, char tag[] ) {
