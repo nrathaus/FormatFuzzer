@@ -978,16 +978,85 @@ struct ttfFile
             break;
 		}
 	}
-    
-    if (findTable(this, "head")) {struct thead head;};
-    if (findTable(this, "hhea")) {struct thhea hhea; };
-    if (findTable(this, "hmtx")) {struct thmtx hmtx; };
-    if (findTable(this, "maxp")) {struct tmaxp maxp; };
-    if (findTable(this, "name")) {struct tname name; };
-    if (findTable(this, "OS/2")) {struct tOS_2 OS_2; };
-    if (findTable(this, "post")) {struct tpost post; };
-    
+    //if (findTable(this, "head")) {struct thead head;};
+    local char tag[]="head";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct thead head;
+            break;
+		}
+	}
+    //if (findTable(this, "hhea")) {struct thhea hhea; };
+    local char tag[]="hhea";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct thhea hhea;
+            break;
+		}
+	}
+   // if (findTable(this, "hmtx")) {struct thmtx hmtx; };
+     local char tag[]="hhea";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct thmtx hmtx;
+            break;
+		}
+	}
+   // if (findTable(this, "maxp")) {struct tmaxp maxp; };
+    local char tag[]="maxp";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct tmaxp maxp;
+            break;
+		}
+	}
+  //  if (findTable(this, "name")) {struct tname name; };
+    local char tag[]="name";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct tname name;
+            break;
+		}
+	}
+    //if (findTable(this, "OS/2")) {struct tOS_2 OS_2; };
+    local char tag[]="OS/2";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct tOS_2 OS_2;
+            break;
+		}
+	}
+    //if (findTable(this, "post")) {struct tpost post; };
+    local char tag[]="post";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct tpost post;
+            break;
+		}
+	}
     //Other Tables
+    /*
     if (findTable(this, "cvt ")) {struct tcvt  cvt ; };
     if (findTable(this, "fpgm")) {struct tfpgm fpgm; };
     if (findTable(this, "loca")) {struct tloca loca; };
@@ -1001,7 +1070,7 @@ struct ttfFile
     if (findTable(this, "LTSH")) {struct tLTSH LTSH; };
 	if (findTable(this, "VDMX")) {struct tVDMX VDMX; };
 	if (findTable(this, "gasp")) {struct tgasp gasp; };
-	
+	*/
     //if (findTable(this, "JSTF")) {struct tJSTF JSTF <read=tJSTFRead>};
     //if (findTable(this, "PCLT")) {struct tPCLT PCLT <read=tPCLTRead>};
     //if (findTable(this, "kern")) {struct tkern kern <read=tkernRead>};
