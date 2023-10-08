@@ -952,7 +952,8 @@ struct ttfFile
     //number2
     local int possible_sfntver[]={0x10000};
     local uint16 possible_table_number[]={9};
-    for(int name_number=9;name_number<=21;name_number++)
+    local int name_number;
+    for(name_number=9;name_number<=21;name_number++)
     {
         possible_table_number+=name_number;
     }
@@ -965,7 +966,19 @@ struct ttfFile
     nextTTFRec = FTell();
 
     //Required Tables
-    if (findTable(this, "cmap")) {struct tcmap cmap; };
+    //if (findTable(this, "cmap")) {struct tcmap cmap; };
+    local int i;
+    local char tag[]="cmap";
+	for( i = 0; i < OffsetTable.numTables; i++ ) {
+		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
+            curTblOffset = Table[i].offset;
+            curTblLength = Table[i].length;
+			FSeek(Table[i].offset);
+			struct tcmap cmap;
+            break;
+		}
+	}
+    
     if (findTable(this, "head")) {struct thead head;};
     if (findTable(this, "hhea")) {struct thhea hhea; };
     if (findTable(this, "hmtx")) {struct thmtx hmtx; };
@@ -996,7 +1009,7 @@ struct ttfFile
     FSeek(nextTTFRec);
     }
 };
-
+/*
 int findTable( ttfFile& file, char tag[] ) {
 	//search the Table[] array for a matching character table tag
 	// set curTblOffset, curTblLength and FSeek curTblOffset
@@ -1012,6 +1025,8 @@ int findTable( ttfFile& file, char tag[] ) {
 	}
 	return 0;
 }
+*/
+
 
 struct TTCHeader
 {
