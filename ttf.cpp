@@ -4650,7 +4650,7 @@ ttfFile* ttfFile::generate() {
 
 	possible_sfntver = { 0x10000 };
 	possible_table_number = { 9 };
-	for (name_number = 9; (name_number <= 21); name_number++) {
+	for (name_number = 10; (name_number <= 21); name_number++) {
 			possible_table_number.insert(possible_table_number.end(), { name_number });
 	;
 	};
