@@ -3448,7 +3448,7 @@ public:
 	/*local*/ ULONG curTblLength;
 	/*local*/ int64 nextTTFRec;
 	/*local*/ uint32 ttfId;
-	/*local*/ uint32 numFonts;
+	/*local*/ uint32 numFonts_2;
 	/*local*/ std::vector<int> possible_values_1;
 	char_class tag_element;
 	char_array_class tag;
@@ -4842,9 +4842,6 @@ ttfFile* ttfFile::generate() {
 			};
 			FSeek(tempNext);
 		};
-		while ((tablenum < ::g->offsetTable().numTables())) {
-			GENERATE_VAR(Table, ::g->Table.generate());
-		};
 	};
 
 	::g->_struct_id = _parent_id;
@@ -4882,13 +4879,13 @@ void generate_file() {
 	::g->RES_2 = (1 << 7);
 	::g->nextTTFRec = 0;
 	::g->ttfId = 0;
-	::g->numFonts = 1;
+	::g->numFonts_2 = 1;
 	::g->possible_values_1 = { 0x74746366 };
 	if ((ReadInt(FTell(), ::g->possible_values_1) == 0x74746366)) {
 		GENERATE(ttc, ::g->ttc.generate());
-		::g->numFonts = ::g->ttc().numFonts();
+		::g->numFonts_2 = ::g->ttc().numFonts();
 	};
-	GENERATE(ttf, ::g->ttf.generate(::g->numFonts));
+	GENERATE(ttf, ::g->ttf.generate(::g->numFonts()));
 
 	file_acc.finish();
 	delete_globals();

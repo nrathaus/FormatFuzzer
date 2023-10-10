@@ -1029,10 +1029,12 @@ struct ttfFile
         FSeek(tempNext);
         
     };
+    /*
     while(tablenum<offsetTable.numTables)
     {
         struct tTable Table;
     }
+    */
     }
    // nextTTFRec = FTell();
     /*
