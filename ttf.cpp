@@ -10,7 +10,7 @@ typedef unsigned short TT_UFWord;
 typedef signed short TT_Short;
 typedef unsigned short TT_UShort;
 typedef signed long TT_Long;
-typedef ULONG TT_ULong;
+typedef ULONG TT_ULONG;
 typedef ULONG TT_Offset;
 typedef unsigned long long LONGDATETIME;
 typedef signed short F2Dot14;
@@ -409,6 +409,29 @@ int tOffsetTable::_index_start = 0;
 
 
 
+class string_class {
+	std::vector<std::string> known_values;
+	std::string value;
+public:
+	int64 _startof = 0;
+	std::size_t _sizeof = 0;
+	std::string operator () () { return value; }
+	string_class(std::vector<std::string> known_values = {}) : known_values(known_values) {}
+
+	std::string generate() {
+		_startof = FTell();
+		if (known_values.empty()) {
+			value = file_acc.file_string();
+		} else {
+			value = file_acc.file_string(known_values);
+		}
+		_sizeof = value.length() + 1;
+		return value;
+	}
+};
+
+
+
 class ULONG_class {
 	int small;
 	std::vector<ULONG> known_values;
@@ -551,33 +574,6 @@ public:
 
 int tTable::_parent_id = 0;
 int tTable::_index_start = 0;
-
-
-
-class tTable_array_class {
-	tTable& element;
-	std::vector<tTable*> value;
-public:
-	int64 _startof = 0;
-	std::size_t _sizeof = 0;
-	std::vector<tTable*>& operator () () { return value; }
-	tTable operator [] (int index) {
-		assert_cond((unsigned)index < value.size(), "array index out of bounds");
-		return *value[index];
-	}
-	tTable_array_class(tTable& element) : element(element) {}
-
-	std::vector<tTable*> generate(unsigned size) {
-		check_array_length(size);
-		_startof = FTell();
-		value = {};
-		for (unsigned i = 0; i < size; ++i) {
-			value.push_back(element.generate());
-			_sizeof += element._sizeof;
-		}
-		return value;
-	}
-};
 
 
 
@@ -2158,8 +2154,8 @@ public:
 	}
 
 	/* locals */
-	ulong numberOfHMetrics;
-	ulong numLeftSideBearing;
+	ULONG numberOfHMetrics;
+	ULONG numLeftSideBearing;
 
 	unsigned char generated = 0;
 	static int _parent_id;
@@ -3147,11 +3143,90 @@ int tpost::_index_start = 0;
 
 
 
+class ULONG_array_class {
+	ULONG_class& element;
+	std::unordered_map<int, std::vector<ULONG>> element_known_values;
+	std::vector<ULONG> value;
+public:
+	int64 _startof = 0;
+	std::size_t _sizeof = 0;
+	std::vector<ULONG>& operator () () { return value; }
+	ULONG operator [] (int index) {
+		assert_cond((unsigned)index < value.size(), "array index out of bounds");
+		return value[index];
+	}
+	ULONG_array_class(ULONG_class& element, std::unordered_map<int, std::vector<ULONG>> element_known_values = {})
+		: element(element), element_known_values(element_known_values) {}
+
+	std::vector<ULONG> generate(unsigned size) {
+		check_array_length(size);
+		_startof = FTell();
+		value = {};
+		for (unsigned i = 0; i < size; ++i) {
+			auto known = element_known_values.find(i);
+			if (known == element_known_values.end()) {
+				value.push_back(element.generate());
+				_sizeof += element._sizeof;
+			} else {
+				value.push_back(file_acc.file_integer(sizeof(ULONG), 0, known->second));
+				_sizeof += sizeof(ULONG);
+			}
+		}
+		return value;
+	}
+};
+
+
+
+class tloca {
+	std::vector<tloca*>& instances;
+
+
+public:
+
+
+	/* locals */
+	ULONG n;
+	short format;
+
+	unsigned char generated = 0;
+	static int _parent_id;
+	static int _index_start;
+	int64 _startof = 0;
+	std::size_t _sizeof = 0;
+	tloca& operator () () { return *instances.back(); }
+	tloca& operator [] (int index) {
+		assert_cond((unsigned)(_index_start + index) < instances.size(), "instance index out of bounds");
+		return *instances[_index_start + index];
+	}
+	std::size_t array_size() {
+		return instances.size() - _index_start;
+	}
+	tloca(std::vector<tloca*>& instances) : instances(instances) { instances.push_back(this); }
+	~tloca() {
+		if (generated == 2)
+			return;
+		while (instances.size()) {
+			tloca* instance = instances.back();
+			instances.pop_back();
+			if (instance->generated == 2)
+				delete instance;
+		}
+	}
+	tloca* generate();
+};
+
+int tloca::_parent_id = 0;
+int tloca::_index_start = 0;
+
+
+
 class ttfFile {
 	std::vector<ttfFile*>& instances;
 
 	tOffsetTable* OffsetTable_var;
-	std::vector<tTable*> Table_var;
+	std::string tempstr_var;
+	tTable* Table_var;
 	tcmap* cmap_var;
 	thead* head_var;
 	thhea* hhea_var;
@@ -3160,9 +3235,11 @@ class ttfFile {
 	tname* name_var;
 	tOS_2* OS_2_var;
 	tpost* post_var;
+	tloca* loca_var;
 
 public:
 	bool OffsetTable_exists = false;
+	bool tempstr_exists = false;
 	bool Table_exists = false;
 	bool cmap_exists = false;
 	bool head_exists = false;
@@ -3172,14 +3249,19 @@ public:
 	bool name_exists = false;
 	bool OS_2_exists = false;
 	bool post_exists = false;
+	bool loca_exists = false;
 
 	tOffsetTable& OffsetTable() {
 		assert_cond(OffsetTable_exists, "struct field OffsetTable does not exist");
 		return *OffsetTable_var;
 	}
-	std::vector<tTable*>& Table() {
+	std::string& tempstr() {
+		assert_cond(tempstr_exists, "struct field tempstr does not exist");
+		return tempstr_var;
+	}
+	tTable& Table() {
 		assert_cond(Table_exists, "struct field Table does not exist");
-		return Table_var;
+		return *Table_var;
 	}
 	tcmap& cmap() {
 		assert_cond(cmap_exists, "struct field cmap does not exist");
@@ -3213,13 +3295,21 @@ public:
 		assert_cond(post_exists, "struct field post does not exist");
 		return *post_var;
 	}
+	tloca& loca() {
+		assert_cond(loca_exists, "struct field loca does not exist");
+		return *loca_var;
+	}
 
 	/* locals */
 	std::vector<int> possible_sfntver;
 	std::vector<uint16> possible_table_number;
 	int name_number;
-	int i;
-	std::string tag;
+	std::vector<std::string> required_tables;
+	std::vector<int> table_found;
+	int tablenum;
+	int64 tempNext;
+	int targetTableidex;
+	int yk1;
 
 	unsigned char generated = 0;
 	static int _parent_id;
@@ -3297,7 +3387,7 @@ std::vector<std::string> ReadBytesInitValues;
 std::vector<TTCHeader*> TTCHeader_ttc_instances;
 std::vector<tOffsetTable*> tOffsetTable_OffsetTable_instances;
 std::vector<tTable_Tag_union*> tTable_Tag_union_Tag_instances;
-std::vector<tTable*> tTable_Table_element_instances;
+std::vector<tTable*> tTable_Table_instances;
 std::vector<tcmap_format0*> tcmap_format0_format0_instances;
 std::vector<SubHeader*> SubHeader_subHeaders_element_instances;
 std::vector<tcmap_format2*> tcmap_format2_format2_instances;
@@ -3320,10 +3410,11 @@ std::vector<tpanose*> tpanose_panose_instances;
 std::vector<tOS_2*> tOS_2_OS_2_instances;
 std::vector<tpostName*> tpostName_name___instances;
 std::vector<tpost*> tpost_post_instances;
+std::vector<tloca*> tloca_loca_instances;
 std::vector<ttfFile*> ttfFile_ttf_element_instances;
 
 
-std::unordered_map<std::string, std::string> variable_types = { { "tag", "char_array_class" }, { "majorVersion", "uint16_class" }, { "minorVersion", "uint16_class" }, { "numFonts", "uint32_class" }, { "offsetTable", "uint32_array_class" }, { "dsigTag", "char_array_class" }, { "dsigLength", "uint32_class" }, { "dsigOffset", "uint32_class" }, { "ttc", "TTCHeader" }, { "SFNT_Ver", "TT_Fixed_class" }, { "numTables", "USHORT_class" }, { "searchRange", "USHORT_class" }, { "entrySelector", "USHORT_class" }, { "rangeShift", "USHORT_class" }, { "OffsetTable", "tOffsetTable" }, { "asChar", "char_array_class" }, { "asLong", "ULONG_class" }, { "Tag", "tTable_Tag_union" }, { "checkSum", "ULONG_class" }, { "offset", "ULONG_class" }, { "length", "ULONG_class" }, { "Table", "tTable_array_class" }, { "version", "USHORT_class" }, { "platformID", "USHORT_class" }, { "encodingID", "USHORT_class" }, { "format", "USHORT_class" }, { "length_", "USHORT_class" }, { "language", "USHORT_class" }, { "glyphIdArray", "BYTE_array_class" }, { "format0", "tcmap_format0" }, { "subHeaderKeys", "USHORT_array_class" }, { "firstCode", "uint16_class" }, { "entryCount", "uint16_class" }, { "idDelta", "int16_class" }, { "idRangeOffset", "uint16_class" }, { "glyphIdArray_", "USHORT_array_class" }, { "subHeaders", "SubHeader_array_class" }, { "format2", "tcmap_format2" }, { "segCountX2", "USHORT_class" }, { "endCount", "USHORT_array_class" }, { "reservedPad", "USHORT_class" }, { "startCount", "USHORT_array_class" }, { "idDelta_", "SHORT_array_class" }, { "idRangeOffset_", "USHORT_array_class" }, { "format4", "tcmap_format4" }, { "firstCode_", "USHORT_class" }, { "entryCount_", "USHORT_class" }, { "format6", "tcmap_format6" }, { "reserved", "USHORT_class" }, { "language_", "ULONG_class" }, { "is32", "BYTE_array_class" }, { "nGroups", "ULONG_class" }, { "startCharCode", "ULONG_class" }, { "endCharCode", "ULONG_class" }, { "startGlyphID", "ULONG_class" }, { "groupings", "tcmap_format8_groupings_struct_array_class" }, { "format8", "tcmap_format8" }, { "groupings_", "tcmap_format12_groupings_struct_array_class" }, { "format12", "tcmap_format12" }, { "EncodingRecord", "tEncodingRecord_array_class" }, { "cmap", "tcmap" }, { "version_", "TT_Fixed_class" }, { "fontRevision", "TT_Fixed_class" }, { "checkSumAdjustment", "ULONG_class" }, { "magicNumber", "ULONG_class" }, { "flags", "USHORT_class" }, { "unitsPerEm", "USHORT_class" }, { "created", "LONGDATETIME_class" }, { "modified", "LONGDATETIME_class" }, { "xMin", "SHORT_class" }, { "yMin", "SHORT_class" }, { "xMax", "SHORT_class" }, { "yMax", "SHORT_class" }, { "macStyle", "USHORT_class" }, { "lowestRecPPEM", "USHORT_class" }, { "fontDirectionHint", "SHORT_class" }, { "indexToLocFormat", "SHORT_class" }, { "glyphDataFormat", "SHORT_class" }, { "head", "thead" }, { "Ascender", "TT_FWord_class" }, { "Descender", "TT_FWord_class" }, { "LineGap", "TT_FWord_class" }, { "advanceWidthMax", "TT_UFWord_class" }, { "minLeftSideBearing", "TT_FWord_class" }, { "minRightSideBearing", "TT_FWord_class" }, { "xMaxExtent", "TT_FWord_class" }, { "caretSlopeRise", "SHORT_class" }, { "caretSlopeRun", "SHORT_class" }, { "caretOffset", "SHORT_class" }, { "reserved_", "SHORT_class" }, { "metricDataFormat", "SHORT_class" }, { "numberOfHMetrics", "USHORT_class" }, { "hhea", "thhea" }, { "advanceWidth", "USHORT_class" }, { "lsb", "SHORT_class" }, { "hMetrics", "tlongHorMetric_array_class" }, { "leftSideBearing", "SHORT_array_class" }, { "hmtx", "thmtx" }, { "numGlyphs", "USHORT_class" }, { "maxPoints", "USHORT_class" }, { "maxContours", "USHORT_class" }, { "maxCompositePoints", "USHORT_class" }, { "maxCompositeContours", "USHORT_class" }, { "maxZones", "USHORT_class" }, { "maxTwilightPoints", "USHORT_class" }, { "maxStorage", "USHORT_class" }, { "maxFunctionDefs", "USHORT_class" }, { "maxInstructionDefs", "USHORT_class" }, { "maxStackElements", "USHORT_class" }, { "maxSizeOfInstructions", "USHORT_class" }, { "maxComponentElements", "USHORT_class" }, { "maxComponentDepth", "USHORT_class" }, { "maxp", "tmaxp" }, { "count", "USHORT_class" }, { "stringOffset", "USHORT_class" }, { "languageID", "USHORT_class" }, { "nameID", "USHORT_class" }, { "offset_", "USHORT_class" }, { "name", "char_array_class" }, { "NameRecord", "tNameRecord_array_class" }, { "name_", "tname" }, { "xAvgCharWidth", "SHORT_class" }, { "usWeightClass", "USHORT_class" }, { "usWidthClass", "USHORT_class" }, { "fsType", "USHORT_class" }, { "ySubscriptXSize", "SHORT_class" }, { "ySubscriptYSize", "SHORT_class" }, { "ySubscriptXOffset", "SHORT_class" }, { "ySubscriptYOffset", "SHORT_class" }, { "ySuperscriptXSize", "SHORT_class" }, { "ySuperscriptYSize", "SHORT_class" }, { "ySuperscriptXOffset", "SHORT_class" }, { "ySuperscriptYOffset", "SHORT_class" }, { "yStrikeoutSize", "SHORT_class" }, { "yStrikeoutPosition", "SHORT_class" }, { "sFamilyClass", "SHORT_class" }, { "bFamilyType", "UBYTE_class" }, { "bSerifStyle", "UBYTE_class" }, { "bWeight", "UBYTE_class" }, { "bProportion", "UBYTE_class" }, { "bContrast", "UBYTE_class" }, { "bStrokeVariation", "UBYTE_class" }, { "bArmStyle", "UBYTE_class" }, { "bLetterform", "UBYTE_class" }, { "bMidline", "UBYTE_class" }, { "bXHeight", "UBYTE_class" }, { "panose", "tpanose" }, { "ulUnicodeRange1", "ULONG_class" }, { "ulUnicodeRange2", "ULONG_class" }, { "ulUnicodeRange3", "ULONG_class" }, { "ulUnicodeRange4", "ULONG_class" }, { "achVendID", "CHAR_array_class" }, { "fsSelection", "USHORT_class" }, { "usFirstCharIndex", "USHORT_class" }, { "usLastCharIndex", "USHORT_class" }, { "sTypoAscender", "SHORT_class" }, { "sTypoDescender", "SHORT_class" }, { "sTypoLineGap", "SHORT_class" }, { "usWinAscent", "USHORT_class" }, { "usWinDescent", "USHORT_class" }, { "ulCodePageRange1", "ULONG_class" }, { "ulCodePageRange2", "ULONG_class" }, { "sxHeight", "SHORT_class" }, { "sCapHeight", "SHORT_class" }, { "usDefaultChar", "USHORT_class" }, { "usBreakChar", "USHORT_class" }, { "usMaxContext", "USHORT_class" }, { "OS_2", "tOS_2" }, { "italicAngle", "TT_Fixed_class" }, { "underlinePosition", "TT_FWord_class" }, { "underlineThickness", "TT_FWord_class" }, { "isFixedPitch", "ULONG_class" }, { "minMemType42", "ULONG_class" }, { "maxMemType42", "ULONG_class" }, { "minMemType1", "ULONG_class" }, { "maxMemType1", "ULONG_class" }, { "numberOfGlyphs", "USHORT_class" }, { "glyphNameIndex", "USHORT_array_class" }, { "length__", "UBYTE_class" }, { "text", "CHAR_array_class" }, { "name__", "tpostName" }, { "offset__", "USHORT_array_class" }, { "post", "tpost" }, { "ttf", "ttfFile_array_class" } };
+std::unordered_map<std::string, std::string> variable_types = { { "tag", "char_array_class" }, { "majorVersion", "uint16_class" }, { "minorVersion", "uint16_class" }, { "numFonts", "uint32_class" }, { "offsetTable", "uint32_array_class" }, { "dsigTag", "char_array_class" }, { "dsigLength", "uint32_class" }, { "dsigOffset", "uint32_class" }, { "ttc", "TTCHeader" }, { "SFNT_Ver", "TT_Fixed_class" }, { "numTables", "USHORT_class" }, { "searchRange", "USHORT_class" }, { "entrySelector", "USHORT_class" }, { "rangeShift", "USHORT_class" }, { "OffsetTable", "tOffsetTable" }, { "tempstr", "string_class" }, { "asChar", "char_array_class" }, { "asLong", "ULONG_class" }, { "Tag", "tTable_Tag_union" }, { "checkSum", "ULONG_class" }, { "offset", "ULONG_class" }, { "length", "ULONG_class" }, { "Table", "tTable" }, { "version", "USHORT_class" }, { "platformID", "USHORT_class" }, { "encodingID", "USHORT_class" }, { "format", "USHORT_class" }, { "length_", "USHORT_class" }, { "language", "USHORT_class" }, { "glyphIdArray", "BYTE_array_class" }, { "format0", "tcmap_format0" }, { "subHeaderKeys", "USHORT_array_class" }, { "firstCode", "uint16_class" }, { "entryCount", "uint16_class" }, { "idDelta", "int16_class" }, { "idRangeOffset", "uint16_class" }, { "glyphIdArray_", "USHORT_array_class" }, { "subHeaders", "SubHeader_array_class" }, { "format2", "tcmap_format2" }, { "segCountX2", "USHORT_class" }, { "endCount", "USHORT_array_class" }, { "reservedPad", "USHORT_class" }, { "startCount", "USHORT_array_class" }, { "idDelta_", "SHORT_array_class" }, { "idRangeOffset_", "USHORT_array_class" }, { "format4", "tcmap_format4" }, { "firstCode_", "USHORT_class" }, { "entryCount_", "USHORT_class" }, { "format6", "tcmap_format6" }, { "reserved", "USHORT_class" }, { "language_", "ULONG_class" }, { "is32", "BYTE_array_class" }, { "nGroups", "ULONG_class" }, { "startCharCode", "ULONG_class" }, { "endCharCode", "ULONG_class" }, { "startGlyphID", "ULONG_class" }, { "groupings", "tcmap_format8_groupings_struct_array_class" }, { "format8", "tcmap_format8" }, { "groupings_", "tcmap_format12_groupings_struct_array_class" }, { "format12", "tcmap_format12" }, { "EncodingRecord", "tEncodingRecord_array_class" }, { "cmap", "tcmap" }, { "version_", "TT_Fixed_class" }, { "fontRevision", "TT_Fixed_class" }, { "checkSumAdjustment", "ULONG_class" }, { "magicNumber", "ULONG_class" }, { "flags", "USHORT_class" }, { "unitsPerEm", "USHORT_class" }, { "created", "LONGDATETIME_class" }, { "modified", "LONGDATETIME_class" }, { "xMin", "SHORT_class" }, { "yMin", "SHORT_class" }, { "xMax", "SHORT_class" }, { "yMax", "SHORT_class" }, { "macStyle", "USHORT_class" }, { "lowestRecPPEM", "USHORT_class" }, { "fontDirectionHint", "SHORT_class" }, { "indexToLocFormat", "SHORT_class" }, { "glyphDataFormat", "SHORT_class" }, { "head", "thead" }, { "Ascender", "TT_FWord_class" }, { "Descender", "TT_FWord_class" }, { "LineGap", "TT_FWord_class" }, { "advanceWidthMax", "TT_UFWord_class" }, { "minLeftSideBearing", "TT_FWord_class" }, { "minRightSideBearing", "TT_FWord_class" }, { "xMaxExtent", "TT_FWord_class" }, { "caretSlopeRise", "SHORT_class" }, { "caretSlopeRun", "SHORT_class" }, { "caretOffset", "SHORT_class" }, { "reserved_", "SHORT_class" }, { "metricDataFormat", "SHORT_class" }, { "numberOfHMetrics", "USHORT_class" }, { "hhea", "thhea" }, { "advanceWidth", "USHORT_class" }, { "lsb", "SHORT_class" }, { "hMetrics", "tlongHorMetric_array_class" }, { "leftSideBearing", "SHORT_array_class" }, { "hmtx", "thmtx" }, { "numGlyphs", "USHORT_class" }, { "maxPoints", "USHORT_class" }, { "maxContours", "USHORT_class" }, { "maxCompositePoints", "USHORT_class" }, { "maxCompositeContours", "USHORT_class" }, { "maxZones", "USHORT_class" }, { "maxTwilightPoints", "USHORT_class" }, { "maxStorage", "USHORT_class" }, { "maxFunctionDefs", "USHORT_class" }, { "maxInstructionDefs", "USHORT_class" }, { "maxStackElements", "USHORT_class" }, { "maxSizeOfInstructions", "USHORT_class" }, { "maxComponentElements", "USHORT_class" }, { "maxComponentDepth", "USHORT_class" }, { "maxp", "tmaxp" }, { "count", "USHORT_class" }, { "stringOffset", "USHORT_class" }, { "languageID", "USHORT_class" }, { "nameID", "USHORT_class" }, { "offset_", "USHORT_class" }, { "name", "char_array_class" }, { "NameRecord", "tNameRecord_array_class" }, { "name_", "tname" }, { "xAvgCharWidth", "SHORT_class" }, { "usWeightClass", "USHORT_class" }, { "usWidthClass", "USHORT_class" }, { "fsType", "USHORT_class" }, { "ySubscriptXSize", "SHORT_class" }, { "ySubscriptYSize", "SHORT_class" }, { "ySubscriptXOffset", "SHORT_class" }, { "ySubscriptYOffset", "SHORT_class" }, { "ySuperscriptXSize", "SHORT_class" }, { "ySuperscriptYSize", "SHORT_class" }, { "ySuperscriptXOffset", "SHORT_class" }, { "ySuperscriptYOffset", "SHORT_class" }, { "yStrikeoutSize", "SHORT_class" }, { "yStrikeoutPosition", "SHORT_class" }, { "sFamilyClass", "SHORT_class" }, { "bFamilyType", "UBYTE_class" }, { "bSerifStyle", "UBYTE_class" }, { "bWeight", "UBYTE_class" }, { "bProportion", "UBYTE_class" }, { "bContrast", "UBYTE_class" }, { "bStrokeVariation", "UBYTE_class" }, { "bArmStyle", "UBYTE_class" }, { "bLetterform", "UBYTE_class" }, { "bMidline", "UBYTE_class" }, { "bXHeight", "UBYTE_class" }, { "panose", "tpanose" }, { "ulUnicodeRange1", "ULONG_class" }, { "ulUnicodeRange2", "ULONG_class" }, { "ulUnicodeRange3", "ULONG_class" }, { "ulUnicodeRange4", "ULONG_class" }, { "achVendID", "CHAR_array_class" }, { "fsSelection", "USHORT_class" }, { "usFirstCharIndex", "USHORT_class" }, { "usLastCharIndex", "USHORT_class" }, { "sTypoAscender", "SHORT_class" }, { "sTypoDescender", "SHORT_class" }, { "sTypoLineGap", "SHORT_class" }, { "usWinAscent", "USHORT_class" }, { "usWinDescent", "USHORT_class" }, { "ulCodePageRange1", "ULONG_class" }, { "ulCodePageRange2", "ULONG_class" }, { "sxHeight", "SHORT_class" }, { "sCapHeight", "SHORT_class" }, { "usDefaultChar", "USHORT_class" }, { "usBreakChar", "USHORT_class" }, { "usMaxContext", "USHORT_class" }, { "OS_2", "tOS_2" }, { "italicAngle", "TT_Fixed_class" }, { "underlinePosition", "TT_FWord_class" }, { "underlineThickness", "TT_FWord_class" }, { "isFixedPitch", "ULONG_class" }, { "minMemType42", "ULONG_class" }, { "maxMemType42", "ULONG_class" }, { "minMemType1", "ULONG_class" }, { "maxMemType1", "ULONG_class" }, { "numberOfGlyphs", "USHORT_class" }, { "glyphNameIndex", "USHORT_array_class" }, { "length__", "UBYTE_class" }, { "text", "CHAR_array_class" }, { "name__", "tpostName" }, { "offset__", "USHORT_array_class" }, { "post", "tpost" }, { "offsets", "USHORT_array_class" }, { "offsets_", "ULONG_array_class" }, { "loca", "tloca" }, { "ttf", "ttfFile_array_class" } };
 
 std::vector<std::vector<int>> integer_ranges = { { 1, 16 } };
 
@@ -3377,6 +3468,7 @@ public:
 	USHORT_class entrySelector;
 	USHORT_class rangeShift;
 	tOffsetTable OffsetTable;
+	string_class tempstr;
 	char_class asChar_element;
 	char_array_class asChar;
 	ULONG_class asLong;
@@ -3384,8 +3476,7 @@ public:
 	ULONG_class checkSum;
 	ULONG_class offset;
 	ULONG_class length;
-	tTable Table_element;
-	tTable_array_class Table;
+	tTable Table;
 	USHORT_class version;
 	USHORT_class platformID;
 	USHORT_class encodingID;
@@ -3567,6 +3658,11 @@ public:
 	USHORT_class offset___element;
 	USHORT_array_class offset__;
 	tpost post;
+	USHORT_class offsets_element;
+	USHORT_array_class offsets;
+	ULONG_class offsets__element;
+	ULONG_array_class offsets_;
+	tloca loca;
 	ttfFile ttf_element;
 	ttfFile_array_class ttf;
 
@@ -3597,8 +3693,7 @@ public:
 		checkSum(1),
 		offset(1),
 		length(1),
-		Table_element(tTable_Table_element_instances),
-		Table(Table_element),
+		Table(tTable_Table_instances),
 		version(1, { 0x00005000, 0x00020000, 0x00025000 }),
 		platformID(1),
 		encodingID(1),
@@ -3780,6 +3875,11 @@ public:
 		offset___element(false),
 		offset__(offset___element),
 		post(tpost_post_instances),
+		offsets_element(false),
+		offsets(offsets_element),
+		offsets__element(false),
+		offsets_(offsets__element),
+		loca(tloca_loca_instances),
 		ttf_element(ttfFile_ttf_element_instances),
 		ttf(ttf_element)
 	{}
@@ -4633,6 +4733,35 @@ tpost* tpost::generate() {
 }
 
 
+tloca* tloca::generate() {
+	if (generated == 1) {
+		tloca* new_instance = new tloca(instances);
+		new_instance->generated = 2;
+		return new_instance->generate();
+	}
+	if (!generated)
+		generated = 1;
+	_startof = FTell();
+	if (_parent_id != ::g->_struct_id && !global_indexing_of_arrays) {
+		_index_start = instances.size() - 1;
+	}
+	_parent_id = ::g->_struct_id;
+	::g->_struct_id = ++::g->_struct_id_counter;
+
+	n = (::g->ttf()[(::g->ttfId - 1)].maxp().numGlyphs() + 1);
+	format = ::g->ttf()[(::g->ttfId - 1)].head().indexToLocFormat();
+	if ((format == 0)) {
+		GENERATE(offsets, ::g->offsets.generate(n));
+	} else {
+		GENERATE(offsets, ::g->offsets_.generate(n));
+	};
+
+	::g->_struct_id = _parent_id;
+	_sizeof = FTell() - _startof;
+	return this;
+}
+
+
 ttfFile* ttfFile::generate() {
 	if (generated == 1) {
 		ttfFile* new_instance = new ttfFile(instances);
@@ -4656,97 +4785,66 @@ ttfFile* ttfFile::generate() {
 	};
 	if (((ReadInt(FTell(), possible_sfntver) == 0x10000) && (ReadUShort((FTell() + 4), possible_table_number) >= 9))) {
 		GENERATE_VAR(OffsetTable, ::g->OffsetTable.generate());
-		GENERATE_VAR(Table, ::g->Table.generate(OffsetTable().numTables()));
-		::g->nextTTFRec = FTell();
-		tag = "cmap";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+		required_tables = { "cmap", "head", "hhea", "hmtx", "maxp", "name", "OS/2", "post", "loca" };
+		table_found = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		tablenum = 0;
+		targetTableidex = 0;
+		while ((tablenum < 9)) {
+			tempNext = FTell();
+			GENERATE_VAR(tempstr, ::g->tempstr.generate());
+			FSeek(tempNext);
+			for (yk1 = 0; (yk1 < 9); yk1 += 1) {
+					if (((tempstr() == required_tables[yk1]) && (table_found[yk1] == 0))) {
+					table_found[yk1] = 1;
+					tablenum = (tablenum + 1);
+					GENERATE_VAR(Table, ::g->Table.generate());
+					targetTableidex = yk1;
+					tempNext = FTell();
+					FSeek(Table().offset());
+					break;
+				};
+			;
+			};
+			if ((targetTableidex == 0)) {
 				GENERATE_VAR(cmap, ::g->cmap.generate());
-				break;
-			};
-		;
-		};
-		tag = "head";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+			} else {
+			if ((targetTableidex == 1)) {
 				GENERATE_VAR(head, ::g->head.generate());
-				break;
-			};
-		;
-		};
-		tag = "hhea";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+			} else {
+			if ((targetTableidex == 2)) {
 				GENERATE_VAR(hhea, ::g->hhea.generate());
-				break;
-			};
-		;
-		};
-		tag = "hhea";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+			} else {
+			if ((targetTableidex == 3)) {
 				GENERATE_VAR(hmtx, ::g->hmtx.generate());
-				break;
-			};
-		;
-		};
-		tag = "maxp";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+			} else {
+			if ((targetTableidex == 4)) {
 				GENERATE_VAR(maxp, ::g->maxp.generate());
-				break;
-			};
-		;
-		};
-		tag = "name";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+			} else {
+			if ((targetTableidex == 5)) {
 				GENERATE_VAR(name, ::g->name_.generate());
-				break;
-			};
-		;
-		};
-		tag = "OS/2";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+			} else {
+			if ((targetTableidex == 6)) {
 				GENERATE_VAR(OS_2, ::g->OS_2.generate());
-				break;
-			};
-		;
-		};
-		tag = "post";
-		for (i = 0; (i < OffsetTable().numTables()); i++) {
-				if ((Strncmp((*Table()[i]).Tag().asChar(), tag, 4) == 0)) {
-				::g->curTblOffset = (*Table()[i]).offset();
-				::g->curTblLength = (*Table()[i]).length();
-				FSeek((*Table()[i]).offset());
+			} else {
+			if ((targetTableidex == 7)) {
 				GENERATE_VAR(post, ::g->post.generate());
-				break;
+			} else {
+			if ((targetTableidex == 8)) {
+				GENERATE_VAR(loca, ::g->loca.generate());
 			};
-		;
+			};
+			};
+			};
+			};
+			};
+			};
+			};
+			};
+			FSeek(tempNext);
 		};
-		FSeek(::g->nextTTFRec);
+		while ((tablenum < ::g->offsetTable().numTables())) {
+			GENERATE_VAR(Table, ::g->Table.generate());
+		};
 	};
 
 	::g->_struct_id = _parent_id;

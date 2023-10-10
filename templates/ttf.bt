@@ -78,7 +78,7 @@ typedef unsigned short  TT_UFWord;  /* Unsigned distance */
 typedef signed short    TT_Short;
 typedef unsigned short  TT_UShort;
 typedef signed long     TT_Long;
-typedef unsigned long   TT_ULong;
+typedef unsigned long   TT_ULONG;
 typedef unsigned long   TT_Offset;
 typedef OLETIME	LONGDATETIME;
 
@@ -327,11 +327,11 @@ typedef struct 	tlongHorMetric {
 };
 
 typedef struct thmtx {
-	local ulong numberOfHMetrics = ttf[ttfId - 1].hhea.numberOfHMetrics;
+	local ULONG numberOfHMetrics = ttf[ttfId - 1].hhea.numberOfHMetrics;
 	struct tlongHorMetric hMetrics[numberOfHMetrics];
 	// Paired advance width and left side bearing values for each glyph. The value numOfHMetrics comes from the 'hhea' table. 
 	// If the font is monospaced, only one entry need be in the array, but that entry is required. The last entry applies to all subsequent glyphs. 
-	local ulong numLeftSideBearing = ( curTblLength - (FTell()-curTblOffset) )/2;
+	local ULONG numLeftSideBearing = ( curTblLength - (FTell()-curTblOffset) )/2;
 
 	if(numLeftSideBearing){
 		SHORT leftSideBearing[ numLeftSideBearing ];
@@ -499,7 +499,7 @@ typedef struct tfpgm {
 };
 
 typedef struct tloca {
-	local ulong n = ttf[ttfId-1].maxp.numGlyphs + 1;
+	local ULONG n = ttf[ttfId-1].maxp.numGlyphs + 1;
 	local short format = ttf[ttfId-1].head.indexToLocFormat;
 	if (format == 0) {
 		USHORT	offsets[n];
@@ -510,7 +510,7 @@ typedef struct tloca {
 
 
 typedef struct tSimpleGlyphPoints {
-	local ulong i;
+	local ULONG i;
 	local quad xStart, xLast; 
 	xStart = xLast = FTell();
 	local quad yStart, yLast; 
@@ -663,7 +663,7 @@ typedef struct tglyf {
 	// relative to the beginning of the glyphData table. 
 	//In order to compute the length of the last glyph element, there is an extra entry 
 	// after the last valid index. 
-	local ulong n;
+	local ULONG n;
 
 	//The (maximum) value of n is numGlyphs + 1. The value for numGlyphs is found in the 'maxp' table.
 	if (maxGlyfRead == 0)
@@ -961,10 +961,81 @@ struct ttfFile
     {
         
     struct tOffsetTable OffsetTable;
-    struct tTable Table[OffsetTable.numTables];
-
-    nextTTFRec = FTell();
-
+    //在这里把9个表给整好
+    local string required_tables[9]={"cmap","head","hhea","hmtx","maxp","name","OS/2","post","loca"};
+    local int table_found[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    //struct tTable Table[OffsetTable.numTables];
+    //上面的数组定义在这里不太合适，展开一个一个来处理
+    /*
+    typedef struct tTable {
+    union {
+		char asChar[4];	// 4 -byte identifier. 
+		ULONG asLong;
+	} Tag;
+	ULONG checkSum;	// CheckSum for this table. 
+	ULONG offset;	// Offset from beginning of TrueType font file. 
+	ULONG length;	// Length of this table. 
+    */
+    local int tablenum=0;
+    local int64 tempNext;
+    local int targetTableidex=0;
+    local int yk1;
+    while(tablenum<9)
+    {
+       tempNext=FTell();
+       string tempstr<strlen=4>;
+       FSeek(tempNext);
+        for(yk1 = 0; yk1< 9; yk1+=1)
+        {
+        if(tempstr == required_tables[yk1] && table_found[yk1]==0)
+            {
+            table_found[yk1] = 1; // Mark this table as found
+            tablenum=tablenum+1;
+            struct tTable Table;
+            targetTableidex=yk1;
+            tempNext=FTell();
+            FSeek(Table.offset);
+            break;
+            }
+        } 
+        if(targetTableidex==0)
+        {
+            struct tcmap cmap;
+            
+        }else if(targetTableidex==1)
+        {
+            struct thead head;
+        }else if(targetTableidex==2){
+            struct thhea hhea;
+        }else if(targetTableidex==3)
+        {
+            struct thmtx hmtx;
+        }else if(targetTableidex==4)
+        {
+            struct tmaxp maxp;
+        }else if(targetTableidex==5)
+        {
+            struct tname name;
+        }else if(targetTableidex==6)
+        {
+            struct tOS_2 OS_2;
+        }else if(targetTableidex==7)
+        {
+            struct tpost post;
+        }else if(targetTableidex==8)
+        {
+            struct tloca loca; 
+        }
+        FSeek(tempNext);
+        
+    };
+    while(tablenum<offsetTable.numTables)
+    {
+        struct tTable Table;
+    }
+    }
+   // nextTTFRec = FTell();
+    /*
     //Required Tables
     //if (findTable(this, "cmap")) {struct tcmap cmap; };
     local int i;
@@ -1055,6 +1126,7 @@ struct ttfFile
             break;
 		}
 	}
+    */
     //Other Tables
     /*
     if (findTable(this, "cvt ")) {struct tcvt  cvt ; };
@@ -1075,8 +1147,7 @@ struct ttfFile
     //if (findTable(this, "PCLT")) {struct tPCLT PCLT <read=tPCLTRead>};
     //if (findTable(this, "kern")) {struct tkern kern <read=tkernRead>};
 
-    FSeek(nextTTFRec);
-    }
+    //FSeek(nextTTFRec);
 };
 /*
 int findTable( ttfFile& file, char tag[] ) {
@@ -1113,12 +1184,12 @@ struct TTCHeader
 };
 
 local uint32 ttfId = 0;
-local uint32 numFonts = 1;
+local uint32 numFonts_2 = 1;
 //first
 local int possible_values_1[]={0x74746366};
 if (ReadInt(FTell(),possible_values_1) == 0x74746366) // big-endian "ttcf"
 {
     struct TTCHeader ttc;
-    numFonts = ttc.numFonts;
+    numFonts_2 = ttc.numFonts;
 }
 struct ttfFile ttf[numFonts];
