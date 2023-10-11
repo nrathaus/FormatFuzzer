@@ -953,182 +953,181 @@ struct ttfFile
     local int possible_sfntver[]={0x10000};
     local uint16 possible_table_number[]={9};
     local int name_number;
+    /*
+    //先尝试限制到9个必须表
     for(name_number=10;name_number<=21;name_number++)
     {
         possible_table_number+=name_number;
     }
-    if(ReadInt(FTell(),possible_sfntver)==0x10000&&ReadUShort(FTell()+4,possible_table_number)>=9)
+    */
+    if(ReadInt(FTell(),possible_sfntver)==0x10000&&ReadUShort(FTell()+4,possible_table_number)==9)
     {
         
-    struct tOffsetTable OffsetTable;
-    //在这里把9个表给整好
-    local string required_tables[9]={"cmap","head","hhea","hmtx","maxp","name","OS/2","post","loca"};
-    local int table_found[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-    //struct tTable Table[OffsetTable.numTables];
-    //上面的数组定义在这里不太合适，展开一个一个来处理
-    /*
-    typedef struct tTable {
-    union {
-		char asChar[4];	// 4 -byte identifier. 
-		ULONG asLong;
-	} Tag;
-	ULONG checkSum;	// CheckSum for this table. 
-	ULONG offset;	// Offset from beginning of TrueType font file. 
-	ULONG length;	// Length of this table. 
-    */
-    local int tablenum=0;
-    local int64 tempNext;
-    local int targetTableidex=0;
-    local int yk1;
-    while(tablenum<9)
-    {
-       tempNext=FTell();
-       string tempstr<strlen=4>=ReadBytes(current_tag, FTell(), 4, preferred_tags, possible_tags)
-       FSeek(tempNext);
-        for(yk1 = 0; yk1< 9; yk1+=1)
+        struct tOffsetTable OffsetTable;
+        //在这里把9个表给整好
+        local string required_tables[9]={"cmap","head","hhea","hmtx","maxp","name","OS/2","post","loca"};
+        local int table_found[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+        local ULONG table_offsets[9]={0, 0, 0, 0, 0, 0, 0, 0, 0};
+        //struct tTable Table[OffsetTable.numTables];
+        //上面的数组定义在这里不太合适，展开一个一个来处理
+        local int tablenum=0;
+        local int targetTableidex=-1;
+        //修改亿些地方，把while循环整成switch
+        local char current_tag[4];
+        while(tablenum<9)
         {
-        if(tempstr == required_tables[yk1] && table_found[yk1]==0)
-            {
-            table_found[yk1] = 1; // Mark this table as found
-            tablenum=tablenum+1;
-            struct tTable Table;
-            targetTableidex=yk1;
-            tempNext=FTell();
-            FSeek(Table.offset);
-            break;
-            }
-        } 
-        if(targetTableidex==0)
-        {
-            struct tcmap cmap;
-            
-        }else if(targetTableidex==1)
-        {
-            struct thead head;
-        }else if(targetTableidex==2){
-            struct thhea hhea;
-        }else if(targetTableidex==3)
-        {
-            struct thmtx hmtx;
-        }else if(targetTableidex==4)
-        {
-            struct tmaxp maxp;
-        }else if(targetTableidex==5)
-        {
-            struct tname name;
-        }else if(targetTableidex==6)
-        {
-            struct tOS_2 OS_2;
-        }else if(targetTableidex==7)
-        {
-            struct tpost post;
-        }else if(targetTableidex==8)
-        {
-            struct tloca loca; 
+        while(ReadBytes(current_tag, FTell(), 4, required_tables)){
+                switch(current_tag) {
+        case "cmap":
+                if(table_found[0]==1)
+                {
+                    break;
+                }
+                    table_found[0]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[0]=Table.offset;
+                    break;
+                
+        case "head":
+                if(table_found[1]==1)
+                {
+                    break;
+                }
+                    table_found[1]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[1]=Table.offset;
+                    break;
+                
+        case "hhea":
+                if(table_found[2]==1)
+                {
+                    break;
+                }
+                    table_found[2]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[2]=Table.offset;
+
+                    break;
+                
+        case "hmtx":
+                if(table_found[3]==1)
+                {
+                    break;
+                }
+                    table_found[3]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[3]=Table.offset;
+
+                    break;
+                
+        case "maxp":
+                if(table_found[4]==1)
+                {
+                    break;
+                }
+                    table_found[4]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[4]=Table.offset;
+                    break;
+        case "name":
+                if(table_found[5]==1)
+                {
+                    break;
+                }
+                    table_found[5]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[5]=Table.offset;
+
+                    break;
+        case "OS/2":
+                if(table_found[6]==1)
+                {
+                    break;
+                }
+                    table_found[6]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[6]=Table.offset;
+
+                    break;
+        case "post":
+                if(table_found[7]==1)
+                {
+                    break;
+                }
+                    table_found[7]=1;
+                    tablenum=tablenum+1;
+                    struct tTable Table;
+                    table_offsets[7]=Table.offset;
+
+                    break;
+        case "loca":
+                if(table_found[8]==1)
+                {
+                    break;
+                }
+                table_found[8]=1;
+                tablenum=tablenum+1;
+                struct tTable Table;
+                table_offsets[8]=Table.offset;
+                break;
+                                    }
         }
-        FSeek(tempNext);
-        
+            
+        };
+        nextTTFRec = FTell();
+        local int offset_idx=0;
+        for(offset_idx=0; offset_idx<9;offset_idx+=1)
+        {
+            if(table_offsets[offset_idx]!=0)
+            {
+                FSeek(table_offsets[offset_idx]);
+                if(offset_idx==0)
+                {
+                struct tcmap cmap;
+                }
+                if(offset_idx==1)
+                {
+                struct thead head;
+                }
+                if(offset_idx==2)
+                {
+                    struct thhea hhea;
+                }
+                if(offset_idx==3)
+                {
+                    struct thmtx hmtx;
+                }
+                if(offset_idx==4)
+                {
+                    struct tmaxp maxp;
+                }
+                if(offset_idx==5)
+                {
+                    struct tname name;
+                }
+                if(offset_idx==6)
+                {
+                    struct tOS_2 OS_2;
+                }
+                if(offset_idx==7)
+                {
+                    struct tpost post;
+                }
+                if(offset_idx==8)
+                {
+                    struct tloca loca;
+                }  
+            }
+        };
+        FSeek(nextTTFRec);
     };
-    /*
-    while(tablenum<offsetTable.numTables)
-    {
-        struct tTable Table;
-    }
-    */
-    }
-   // nextTTFRec = FTell();
-    /*
-    //Required Tables
-    //if (findTable(this, "cmap")) {struct tcmap cmap; };
-    local int i;
-    local char tag[]="cmap";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct tcmap cmap;
-            break;
-		}
-	}
-    //if (findTable(this, "head")) {struct thead head;};
-    local char tag[]="head";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct thead head;
-            break;
-		}
-	}
-    //if (findTable(this, "hhea")) {struct thhea hhea; };
-    local char tag[]="hhea";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct thhea hhea;
-            break;
-		}
-	}
-   // if (findTable(this, "hmtx")) {struct thmtx hmtx; };
-     local char tag[]="hhea";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct thmtx hmtx;
-            break;
-		}
-	}
-   // if (findTable(this, "maxp")) {struct tmaxp maxp; };
-    local char tag[]="maxp";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct tmaxp maxp;
-            break;
-		}
-	}
-  //  if (findTable(this, "name")) {struct tname name; };
-    local char tag[]="name";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct tname name;
-            break;
-		}
-	}
-    //if (findTable(this, "OS/2")) {struct tOS_2 OS_2; };
-    local char tag[]="OS/2";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct tOS_2 OS_2;
-            break;
-		}
-	}
-    //if (findTable(this, "post")) {struct tpost post; };
-    local char tag[]="post";
-	for( i = 0; i < OffsetTable.numTables; i++ ) {
-		if ( Strncmp(Table[i].Tag.asChar, tag, 4)==0 ) {
-            curTblOffset = Table[i].offset;
-            curTblLength = Table[i].length;
-			FSeek(Table[i].offset);
-			struct tpost post;
-            break;
-		}
-	}
-    */
     //Other Tables
     /*
     if (findTable(this, "cvt ")) {struct tcvt  cvt ; };
