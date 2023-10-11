@@ -313,27 +313,27 @@ public:
 
 class USHORT_class {
 	int small;
-	std::vector<USHORT> known_values;
-	USHORT value;
+	std::vector<UINT> known_values;
+	UINT value;
 public:
 	int64 _startof = 0;
-	std::size_t _sizeof = sizeof(USHORT);
-	USHORT operator () () { return value; }
-	USHORT_class(int small, std::vector<USHORT> known_values = {}) : small(small), known_values(known_values) {}
+	std::size_t _sizeof = sizeof(UINT);
+	UINT operator () () { return value; }
+	USHORT_class(int small, std::vector<UINT> known_values = {}) : small(small), known_values(known_values) {}
 
-	USHORT generate() {
+	UINT generate() {
 		_startof = FTell();
 		if (known_values.empty()) {
-			value = file_acc.file_integer(sizeof(USHORT), 0, small);
+			value = file_acc.file_integer(sizeof(UINT), 0, small);
 		} else {
-			value = file_acc.file_integer(sizeof(USHORT), 0, known_values);
+			value = file_acc.file_integer(sizeof(UINT), 0, known_values);
 		}
 		return value;
 	}
 
-	USHORT generate(std::vector<USHORT> possible_values) {
+	UINT generate(std::vector<UINT> possible_values) {
 		_startof = FTell();
-		value = file_acc.file_integer(sizeof(USHORT), 0, possible_values);
+		value = file_acc.file_integer(sizeof(UINT), 0, possible_values);
 		return value;
 	}
 };
