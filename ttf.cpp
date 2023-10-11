@@ -2412,12 +2412,12 @@ public:
 	}
 	tNameRecord_array_class(tNameRecord& element) : element(element) {}
 
-	std::vector<tNameRecord*> generate(unsigned size) {
+	std::vector<tNameRecord*> generate(unsigned size, quad& name_table, quad& NextNameRecord) {
 		check_array_length(size);
 		_startof = FTell();
 		value = {};
 		for (unsigned i = 0; i < size; ++i) {
-			value.push_back(element.generate());
+			value.push_back(element.generate(name_table,NextNameRecord));
 			_sizeof += element._sizeof;
 		}
 		return value;
@@ -4561,7 +4561,7 @@ tname* tname::generate() {
 	GENERATE_VAR(format, ::g->format.generate());
 	GENERATE_VAR(count, ::g->count.generate());
 	GENERATE_VAR(stringOffset, ::g->stringOffset.generate());
-	GENERATE_VAR(NameRecord, ::g->NameRecord.generate(count()));
+	GENERATE_VAR(NameRecord, ::g->NameRecord.generate(count(),name_table,NextNameRecord));
 
 	::g->_struct_id = _parent_id;
 	_sizeof = FTell() - _startof;
