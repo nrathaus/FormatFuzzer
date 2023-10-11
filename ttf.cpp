@@ -1630,12 +1630,12 @@ public:
 	}
 	tEncodingRecord_array_class(tEncodingRecord& element) : element(element) {}
 
-	std::vector<tEncodingRecord*> generate(unsigned size) {
+	std::vector<tEncodingRecord*> generate(unsigned size, quad& cmap_table, quad& next_cmap_record) {
 		check_array_length(size);
 		_startof = FTell();
 		value = {};
 		for (unsigned i = 0; i < size; ++i) {
-			value.push_back(element.generate());
+			value.push_back(element.generate(cmap_table, next_cmap_record));
 			_sizeof += element._sizeof;
 		}
 		return value;
@@ -4330,7 +4330,7 @@ tcmap* tcmap::generate() {
 	cmap_table = FTell();
 	GENERATE_VAR(version, ::g->version.generate());
 	GENERATE_VAR(numTables, ::g->numTables.generate());
-	GENERATE_VAR(EncodingRecord, ::g->EncodingRecord.generate(numTables()));
+	GENERATE_VAR(EncodingRecord, ::g->EncodingRecord.generate(numTables(), cmap_table, next_cmap_record));
 
 	::g->_struct_id = _parent_id;
 	_sizeof = FTell() - _startof;
