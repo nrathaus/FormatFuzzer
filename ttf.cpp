@@ -313,27 +313,27 @@ public:
 
 class USHORT_class {
 	int small;
-	std::vector<USHORT> known_values;
-	USHORT value;
+	std::vector<UINT> known_values;
+	UINT value;
 public:
 	int64 _startof = 0;
-	std::size_t _sizeof = sizeof(USHORT);
-	USHORT operator () () { return value; }
-	USHORT_class(int small, std::vector<USHORT> known_values = {}) : small(small), known_values(known_values) {}
+	std::size_t _sizeof = sizeof(UINT);
+	UINT operator () () { return value; }
+	USHORT_class(int small, std::vector<UINT> known_values = {}) : small(small), known_values(known_values) {}
 
-	USHORT generate() {
+	UINT generate() {
 		_startof = FTell();
 		if (known_values.empty()) {
-			value = file_acc.file_integer(sizeof(USHORT), 0, small);
+			value = file_acc.file_integer(sizeof(UINT), 0, small);
 		} else {
-			value = file_acc.file_integer(sizeof(USHORT), 0, known_values);
+			value = file_acc.file_integer(sizeof(UINT), 0, known_values);
 		}
 		return value;
 	}
 
-	USHORT generate(std::vector<USHORT> possible_values) {
+	UINT generate(std::vector<UINT> possible_values) {
 		_startof = FTell();
-		value = file_acc.file_integer(sizeof(USHORT), 0, possible_values);
+		value = file_acc.file_integer(sizeof(UINT), 0, possible_values);
 		return value;
 	}
 };
@@ -1607,12 +1607,12 @@ public:
 	}
 	tEncodingRecord_array_class(tEncodingRecord& element) : element(element) {}
 
-	std::vector<tEncodingRecord*> generate(unsigned size) {
+	std::vector<tEncodingRecord*> generate(unsigned size,quad& cmap_table, quad& next_cmap_record) {
 		check_array_length(size);
 		_startof = FTell();
 		value = {};
 		for (unsigned i = 0; i < size; ++i) {
-			value.push_back(element.generate());
+			value.push_back(element.generate(cmap_table,next_cmap_record));
 			_sizeof += element._sizeof;
 		}
 		return value;
@@ -2389,12 +2389,12 @@ public:
 	}
 	tNameRecord_array_class(tNameRecord& element) : element(element) {}
 
-	std::vector<tNameRecord*> generate(unsigned size) {
+	std::vector<tNameRecord*> generate(unsigned size,quad& name_table, quad& NextNameRecord) {
 		check_array_length(size);
 		_startof = FTell();
 		value = {};
 		for (unsigned i = 0; i < size; ++i) {
-			value.push_back(element.generate());
+			value.push_back(element.generate(name_table,NextNameRecord));
 			_sizeof += element._sizeof;
 		}
 		return value;
@@ -4301,7 +4301,7 @@ tcmap* tcmap::generate() {
 	cmap_table = FTell();
 	GENERATE_VAR(version, ::g->version.generate());
 	GENERATE_VAR(numTables, ::g->numTables.generate());
-	GENERATE_VAR(EncodingRecord, ::g->EncodingRecord.generate(numTables()));
+	GENERATE_VAR(EncodingRecord, ::g->EncodingRecord.generate(numTables(),cmap_table,next_cmap_record));
 
 	::g->_struct_id = _parent_id;
 	_sizeof = FTell() - _startof;
@@ -4427,7 +4427,7 @@ thmtx* thmtx::generate() {
 	_parent_id = ::g->_struct_id;
 	::g->_struct_id = ++::g->_struct_id_counter;
 
-	numberOfHMetrics = ::g->ttf()[(::g->ttfId - 1)].hhea().numberOfHMetrics();
+	numberOfHMetrics = ::g->ttf()[(::g->ttfId - 1)]->hhea().numberOfHMetrics();
 	GENERATE_VAR(hMetrics, ::g->hMetrics.generate(numberOfHMetrics));
 	numLeftSideBearing = ((::g->curTblLength - (FTell() - ::g->curTblOffset)) / 2);
 	if (numLeftSideBearing) {
@@ -4532,7 +4532,7 @@ tname* tname::generate() {
 	GENERATE_VAR(format, ::g->format.generate());
 	GENERATE_VAR(count, ::g->count.generate());
 	GENERATE_VAR(stringOffset, ::g->stringOffset.generate());
-	GENERATE_VAR(NameRecord, ::g->NameRecord.generate(count()));
+	GENERATE_VAR(NameRecord, ::g->NameRecord.generate(count(),name_table,NextNameRecord));
 
 	::g->_struct_id = _parent_id;
 	_sizeof = FTell() - _startof;
@@ -4719,8 +4719,8 @@ tloca* tloca::generate() {
 	_parent_id = ::g->_struct_id;
 	::g->_struct_id = ++::g->_struct_id_counter;
 
-	n = (::g->ttf()[(::g->ttfId - 1)].maxp().numGlyphs() + 1);
-	format = ::g->ttf()[(::g->ttfId - 1)].head().indexToLocFormat();
+	n = (::g->ttf()[(::g->ttfId - 1)]->maxp().numGlyphs() + 1);
+	format = ::g->ttf()[(::g->ttfId - 1)]->head().indexToLocFormat();
 	if ((format == 0)) {
 		GENERATE(offsets, ::g->offsets.generate(n));
 	} else {
