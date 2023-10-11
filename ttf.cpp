@@ -4456,7 +4456,7 @@ thmtx* thmtx::generate() {
 	_parent_id = ::g->_struct_id;
 	::g->_struct_id = ++::g->_struct_id_counter;
 
-	numberOfHMetrics = ::g->ttf()[(::g->ttfId - 1)].hhea().numberOfHMetrics();
+	numberOfHMetrics = ::g->ttf()[(::g->ttfId - 1)]->hhea().numberOfHMetrics();
 	GENERATE_VAR(hMetrics, ::g->hMetrics.generate(numberOfHMetrics));
 	numLeftSideBearing = ((::g->curTblLength - (FTell() - ::g->curTblOffset)) / 2);
 	if (numLeftSideBearing) {
@@ -4748,8 +4748,8 @@ tloca* tloca::generate() {
 	_parent_id = ::g->_struct_id;
 	::g->_struct_id = ++::g->_struct_id_counter;
 
-	n = (::g->ttf()[(::g->ttfId - 1)].maxp().numGlyphs() + 1);
-	format = ::g->ttf()[(::g->ttfId - 1)].head().indexToLocFormat();
+	n = (::g->ttf()[(::g->ttfId - 1)]->maxp().numGlyphs() + 1);
+	format = ::g->ttf()[(::g->ttfId - 1)]->head().indexToLocFormat();
 	if ((format == 0)) {
 		GENERATE(offsets, ::g->offsets.generate(n));
 	} else {
