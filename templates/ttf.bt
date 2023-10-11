@@ -983,7 +983,7 @@ struct ttfFile
     while(tablenum<9)
     {
        tempNext=FTell();
-       string tempstr<strlen=4>;
+       string tempstr<strlen=4>=ReadBytes(current_tag, FTell(), 4, preferred_tags, possible_tags)
        FSeek(tempNext);
         for(yk1 = 0; yk1< 9; yk1+=1)
         {

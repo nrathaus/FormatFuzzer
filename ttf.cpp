@@ -3303,7 +3303,7 @@ public:
 	/* locals */
 	std::vector<int> possible_sfntver;
 	std::vector<uint16> possible_table_number;
-	int name_number;
+	ushort name_number;
 	std::vector<std::string> required_tables;
 	std::vector<int> table_found;
 	int tablenum;
