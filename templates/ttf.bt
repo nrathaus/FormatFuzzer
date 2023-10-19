@@ -1185,12 +1185,14 @@ struct TTCHeader
 };
 
 local uint32 ttfId = 0;
-local uint32 numFonts_2 = 1;
+local uint32 numFonts = 1;
 //first
+/*
 local int possible_values_1[]={0x74746366};
 if (ReadInt(FTell(),possible_values_1) == 0x74746366) // big-endian "ttcf"
 {
     struct TTCHeader ttc;
     numFonts_2 = ttc.numFonts;
 }
+*/
 struct ttfFile ttf[numFonts];
