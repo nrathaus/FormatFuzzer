@@ -75,14 +75,14 @@ typedef struct {
 		RGBQUAD aColors[ 1 << bmiHeader.biBitCount ];
 	}
 	
-	// Calculate bytes per line and padding required
-	local int bytesPerLine = Ceil( bmiHeader.biWidth * bmiHeader.biBitCount / 8.0 );
-	local int padding      = 4 - (bytesPerLine % 4);
-	if( padding == 4 )
-	padding = 0;
-
 	// Define each line of the image
 	struct BITMAPLINE {
+
+		// Calculate bytes per line and padding required
+		local int bytesPerLine = Ceil( bmiHeader.biWidth * bmiHeader.biBitCount / 8.0 );
+		local int padding      = 4 - (bytesPerLine % 4);
+		if( padding == 4 )
+			padding = 0;
 
 	// Define color data
 	if( bmiHeader.biBitCount < 8 )
