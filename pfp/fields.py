@@ -832,7 +832,7 @@ class Struct(Field):
         modified_watchers = []
         for x in six.moves.range(len(self._pfp__children)):
             modified_watchers += self._pfp__children[x]._pfp__set_value(value[x])
-        return modified_watches
+        return modified_watchers
 
     def _pfp__add_child(self, name, child, stream=None, overwrite=False):
         """Add a child to the Struct field. If multiple consecutive fields are
@@ -842,7 +842,7 @@ class Struct(Field):
         :param str name: The name of the child
         :param pfp.fields.Field child: The field to add
         :param bool overwrite: Overwrite existing fields (False)
-        :param pfp.bitwrap.BitwrappedStream stream: unused, but her for compatability with Union._pfp__add_child
+        :param pfp.bitwrap.BitwrappedStream stream: unused, but her for compatibility with Union._pfp__add_child
         :returns: The resulting field added
         """
         res = None
@@ -1370,9 +1370,13 @@ class NumberBase(Field):
             self._pfp__offset = stream.tell()
 
         if ignore_bitfields or self.bitsize is None:
-            data = struct.pack(
-                "{}{}".format(self.endian, self.format), self._pfp__value
-            )
+            try:
+                data = struct.pack(
+                    "{}{}".format(self.endian, self.format), self._pfp__value
+                )
+            except Exception as exception:
+                print(f"Failed to pack due to: {exception}")
+                raise ValueError()
             if stream is not None:
                 stream.write(data)
                 return len(data)
