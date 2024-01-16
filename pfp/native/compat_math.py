@@ -24,27 +24,10 @@ def Abs(params, ctxt, scope, stream, coord):
 
 
 # double Ceil( double x )
-# I split it to:
-#  double CeilToDouble( double X )
-#  int CeilToDouble( int X )
-# To fix the ICO.bt template that does (int) casting
-@native(name="CeilToInt", ret=pfp.fields.Int)
-def CeilToInt(params, ctxt, scope, stream, coord):
-    if len(params) < 1:
-        raise errors.InvalidArguments(
-            coord, "{} args".format(len(params)), "one arg"
-        )
-    value = PYVAL(params[0])
-    return int(math.ceil(value))
-
-@native(name="CeilToDouble", ret=pfp.fields.Double)
-def CeilToDouble(params, ctxt, scope, stream, coord):
-    if len(params) < 1:
-        raise errors.InvalidArguments(
-            coord, "{} args".format(len(params)), "one arg"
-        )
-    value = PYVAL(params[0])
-    return float(math.ceil(value))
+@native(name="Ceil", ret=pfp.fields.Double)
+def Ceil(params, ctxt, scope, stream, coord):
+    value = PYSTR(params[0])
+    return math.ceil(value)
 
 
 # double Cos( double a )
