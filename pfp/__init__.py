@@ -69,11 +69,11 @@ def parse(
     if template_file is not None:
         orig_filename = template_file
         try:
-            with open(os.path.expanduser(template_file), "r") as f:
+            with open(os.path.expanduser(template_file), "r", encoding="latin1") as f:
                 template = f.read()
         except Exception as e:
             raise Exception(
-                "Could not open template file '{}'".format(template_file)
+                f"Could not open template file '{template_file}'"
             )
 
     # the user may specify their own instance of PfpInterp to be
