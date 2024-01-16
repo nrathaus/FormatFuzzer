@@ -3,12 +3,11 @@
 
 """
 This module of native functions is implemented for
-compatability with 010 editor functions. Some of these functions
+compatibility with 010 editor functions. Some of these functions
 are nops, some are fully implemented.
 """
 
 import six
-import sys
 
 from pfp.native import native
 import pfp.errors as errors

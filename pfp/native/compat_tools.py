@@ -3,20 +3,20 @@
 
 """
 This module of native functions is implemented for
-compatability with 010 editor functions. Some of these functions
+compatibility with 010 editor functions. Some of these functions
 are nops, some are fully implemented.
 """
 
 import binascii
 import re
+import zlib
+
 import six
-import sys
 
 from pfp.native import native, predefine
 import pfp.errors as errors
 import pfp.fields
 import pfp.utils as utils
-import zlib
 
 # http://www.sweetscape.com/010editor/manual/FuncTools.htm
 
