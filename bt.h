@@ -857,6 +857,10 @@ int Atoi(std::string s) {
 	return atoi(s.c_str());
 }
 
+double Ceil(double s) {
+	return ceil(s);
+}
+
 int Strlen(std::string s) { return s.size(); }
 
 int Strcmp(std::string s1, std::string s2) {
