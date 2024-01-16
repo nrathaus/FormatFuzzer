@@ -3,13 +3,14 @@
 
 """
 This module of native functions is implemented for
-compatability with 010 editor functions. Some of these functions
+compatibility with 010 editor functions. Some of these functions
 are nops, some are fully implemented.
 """
 
-import sys
+import math
 
 from pfp.native import native
+import pfp.errors as errors
 import pfp.fields
 
 # http://www.sweetscape.com/010editor/manual/FuncMath.htm
@@ -23,9 +24,27 @@ def Abs(params, ctxt, scope, stream, coord):
 
 
 # double Ceil( double x )
-@native(name="Ceil", ret=pfp.fields.Double)
-def Ceil(params, ctxt, scope, stream, coord):
-    raise NotImplementedError()
+# I split it to:
+#  double CeilToDouble( double X )
+#  int CeilToDouble( int X )
+# To fix the ICO.bt template that does (int) casting
+@native(name="CeilToInt", ret=pfp.fields.Int)
+def CeilToInt(params, ctxt, scope, stream, coord):
+    if len(params) < 1:
+        raise errors.InvalidArguments(
+            coord, "{} args".format(len(params)), "one arg"
+        )
+    value = PYVAL(params[0])
+    return int(math.ceil(value))
+
+@native(name="CeilToDouble", ret=pfp.fields.Double)
+def CeilToDouble(params, ctxt, scope, stream, coord):
+    if len(params) < 1:
+        raise errors.InvalidArguments(
+            coord, "{} args".format(len(params)), "one arg"
+        )
+    value = PYVAL(params[0])
+    return float(math.ceil(value))
 
 
 # double Cos( double a )
